@@ -17,7 +17,7 @@ import coolname
 import hydra
 import pydantic
 from omegaconf import DictConfig
-from adam_atan2 import AdamATan2
+from adam_atan2_pytorch import AdamAtan2
 
 from puzzle_dataset import PuzzleDataset, PuzzleDatasetConfig, PuzzleDatasetMetadata
 from utils.functions import load_model_class, get_model_source_path
@@ -147,7 +147,7 @@ def create_model(config: PretrainConfig, train_metadata: PuzzleDatasetMetadata, 
     # Optimizers and lr
     if config.arch.puzzle_emb_ndim == 0:
         optimizers = [
-            AdamATan2(
+            AdamAtan2(
                 model.parameters(),
                 lr=0,  # Needs to be set by scheduler
                 weight_decay=config.weight_decay,
@@ -177,9 +177,9 @@ def create_model(config: PretrainConfig, train_metadata: PuzzleDatasetMetadata, 
                 weight_decay=config.puzzle_emb_weight_decay,
                 world_size=world_size
             ),
-            AdamATan2(
+            AdamAtan2(
                 model.parameters(),
-                lr=0,  # Needs to be set by scheduler
+                lr=1e-10,  # Needs to be set by scheduler
                 weight_decay=config.weight_decay,
                 betas=(config.beta1, config.beta2)
             )
@@ -239,10 +239,11 @@ def save_train_state(config: PretrainConfig, train_state: TrainState):
 
     os.makedirs(config.checkpoint_path, exist_ok=True)
     torch.save(train_state.model.state_dict(), os.path.join(config.checkpoint_path, f"step_{train_state.step}"))
+    torch.save(train_state.model.state_dict(), os.path.join(config.checkpoint_path, f"latest"))
 
 
 def load_checkpoint(model: nn.Module, config: PretrainConfig):
-    if config.load_checkpoint is not None:
+    if config.load_checkpoint is not None and os.path.exists(config.load_checkpoint):
         print(f"Loading checkpoint {config.load_checkpoint}")
 
         # Load state dict

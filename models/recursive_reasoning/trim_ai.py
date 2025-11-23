@@ -214,20 +214,14 @@ class TinyReInjectionModel(nn.Module):
             persistent=True
         )
 
-        self.modules = nn.ModuleList([TinyReInjectionModule(self.config) for _ in range(self.config.H_cycles)])
+        self.h_modules = nn.ModuleList([TinyReInjectionModule(self.config) for _ in range(self.config.H_cycles)])
         
         # Dummy Q-head for compatibility (not used without ACT)
         self.q_head = CastedLinear(self.config.hidden_size, 2, bias=True)
         with torch.no_grad():
             self.q_head.weight.zero_()
             self.q_head.bias.fill_(-5)  # type: ignore
-
-    @property
-    def puzzle_emb(self):
-        # puzzle_emb is only created if puzzle_emb_ndim > 0
-        # Access the underlying attribute from __dict__ to avoid recursion
-        return self.__dict__.get('puzzle_emb', None)
-
+        
     def _input_embeddings(self, input: torch.Tensor, puzzle_identifiers: torch.Tensor):
         """Create input embeddings from tokens and puzzle identifiers."""
         # Token embedding
@@ -264,9 +258,10 @@ class TinyReInjectionModel(nn.Module):
     def initial_carry(self, batch: Dict[str, torch.Tensor]):
         """Create initial carry with labels. All sequences are 'halted' since no ACT."""
         batch_size = batch["inputs"].shape[0]
+        device = batch["inputs"].device
         return TinyReInjectionModel_Carry(
-            steps=torch.zeros((batch_size,), dtype=torch.int32),
-            halted=torch.ones((batch_size,), dtype=torch.bool),  # All halted (no ACT)
+            steps=torch.zeros((batch_size,), dtype=torch.int32, device=device),
+            halted=torch.ones((batch_size,), dtype=torch.bool, device=device),  # All halted (no ACT)
             current_data={k: v.clone() for k, v in batch.items()}
         )
 
@@ -294,7 +289,7 @@ class TinyReInjectionModel(nn.Module):
         # y, z = self.final_block(**seq_info, y=y, z=z, input_injection=None)
 
 
-        for module in self.modules:
+        for module in self.h_modules:
             y, z = module(cos_sin=seq_info["cos_sin"], y=y, z=z, x=x)
 
         # Output heads
@@ -304,9 +299,10 @@ class TinyReInjectionModel(nn.Module):
         q_logits = self.q_head(y[:, 0]).to(torch.float32)  # Use first puzzle_emb position
         
         # Update carry: keep labels, mark all as halted (single forward pass)
+        device = batch["inputs"].device
         new_carry = TinyReInjectionModel_Carry(
-            steps=torch.ones((batch_size,), dtype=torch.int32),  # Single step
-            halted=torch.ones((batch_size,), dtype=torch.bool),  # All halted
+            steps=torch.ones((batch_size,), dtype=torch.int32, device=device),  # Single step
+            halted=torch.ones((batch_size,), dtype=torch.bool, device=device),  # All halted
             current_data={"labels": batch["labels"]}  # Keep labels for loss
         )
         

@@ -2,8 +2,8 @@
 #SBATCH --job-name=pretrain_att_maze30x30
 #SBATCH --output=logs/pretrain_att_maze30x30_%j.out
 #SBATCH --error=logs/pretrain_att_maze30x30_%j.err
-#SBATCH --cpus-per-task=6
-#SBATCH --gres=gpu:4
+#SBATCH --cpus-per-task=8
+#SBATCH --gres=gpu:8
 #SBATCH --mem=64G
 #SBATCH --time=24:00:00
 #SBATCH --partition=general
@@ -19,11 +19,11 @@ export WANDB_API_KEY="700b12366796842d647c1443c56edddc253bd508"
 
 # Run the training command
 run_name="pretrain_att_maze30x30"
-torchrun --nproc-per-node 4 \
+torchrun --nproc-per-node 8 \
  --rdzv_backend=c10d \
  --rdzv_endpoint=localhost:0 \
  --nnodes=1 pretrain.py \
- arch=trm \
+ arch=trim \
  data_paths="[data/maze-30x30-hard-1k]" \
  evaluators="[]" \
  epochs=50000 \

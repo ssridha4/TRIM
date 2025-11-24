@@ -15,12 +15,12 @@ evaluators:
   - name: arc@ARC
 
 # Hyperparams - Training
-global_batch_size: 256
+global_batch_size: 128
 
 epochs: 100000
 eval_interval: 10000
 checkpoint_every_eval: True
-checkpoint_path: /home/adagrawa/work/genai/model_checkpoints
+checkpoint_path: "model_checkpoints/trim/sudoku-extreme"
 
 lr: 1e-4
 lr_min_ratio: 1.0

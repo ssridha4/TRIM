@@ -1,4 +1,4 @@
-name: recursive_reasoning.trim_ai@TinyReInjectionModel
+name: recursive_reasoning.trim@TinyReInjectionModel
 loss:
   name: losses@ACTLossHead
   loss_type: stablemax_cross_entropy
